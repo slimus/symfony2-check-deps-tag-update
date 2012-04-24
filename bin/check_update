@@ -38,13 +38,10 @@ foreach ($deps as $name => $dep) {
     }
     $url = $dep['git'];
 
-    if (!is_dir($installDir)) {
-        system(sprintf('git clone %s %s', escapeshellarg($url), escapeshellarg($installDir)));
-    }
+    $lastRev = null;
+    exec(sprintf('cd %s && git describe --tags `git rev-list --tags --max-count=1`', escapeshellarg($installDir)), $lastRev);
 
-    $lastRev = system(sprintf('cd %s && git describe --tags `git rev-list --tags --max-count=1`', escapeshellarg($installDir)));
-
-    if ($dep['version'] !== $lastRev) {
-        echo sprintf("%s[%s] have update version %s", $name, $dep['version'], $lastRev) . PHP_EOL;
+    if (isset($lastRev[0]) && $dep['version'] !== $lastRev[0]) {
+        echo sprintf("%s[%s] have update version %s", $name, $dep['version'], $lastRev[0]) . PHP_EOL;
     }
 }
