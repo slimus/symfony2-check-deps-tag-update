@@ -1,0 +1,50 @@
+#!/usr/bin/env php
+<?php
+
+/*
+ * Check last tag\branch for vendors
+ *
+ * (c) Alexey Romanenko <slimusgm@gmail.com>
+ *
+ *
+ */
+
+
+set_time_limit(0);
+
+$rootDir = dirname(__DIR__);
+$vendorDir = $rootDir.'/vendor';
+
+//array_shift($argv);
+
+$deps = parse_ini_file($rootDir.'/deps', true, INI_SCANNER_RAW);
+if (false === $deps) {
+    exit('The deps file is not valid ini syntax. Perhaps missing a trailing newline?'.PHP_EOL);
+}
+
+foreach ($deps as $name => $dep) {
+    if (!isset($dep['version']) || strpos($dep['version'], "origin") !== false) {
+        continue;
+    }
+    $dep = array_map('trim', $dep);
+
+    $installDir = isset($dep['target']) ? $vendorDir.'/'.$dep['target'] : $vendorDir.'/'.$name;
+
+    echo '> Check ' . $name . PHP_EOL;
+
+    // url
+    if (!isset($dep['git'])) {
+        exit(sprintf('The "git" value for the "%s" dependency must be set.', $name).PHP_EOL);
+    }
+    $url = $dep['git'];
+
+    if (!is_dir($installDir)) {
+        system(sprintf('git clone %s %s', escapeshellarg($url), escapeshellarg($installDir)));
+    }
+
+    $lastRev = system(sprintf('cd %s && git describe --tags `git rev-list --tags --max-count=1`', escapeshellarg($installDir)));
+
+    if ($dep['version'] !== $lastRev) {
+        echo sprintf("%s[%s] have update version %s", $name, $dep['version'], $lastRev) . PHP_EOL;
+    }
+}
